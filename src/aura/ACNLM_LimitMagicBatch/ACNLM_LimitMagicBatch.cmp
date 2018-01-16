@@ -1,0 +1,46 @@
+<aura:component controller="ACNLM_GetEnvironemntLimitsBatch"  
+				implements="flexipage:availableForAllPageTypes,force:appHostable"
+                access="global">
+	<aura:attribute name="scheduledJob" type="CronTrigger"/>
+	<aura:attribute name="spinnerShow" type="Boolean" default="true"/>
+    <aura:attribute name="errorMessage" type="String"/>
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+
+	<lightning:card >
+        <aura:if isTrue="{!v.spinnerShow}">
+				<lightning:spinner variant="Brand" size="medium"/>
+		</aura:if>
+        <aura:set attribute="title" >
+            <lightning:icon iconName="custom:custom67" size="medium"/>&nbsp;
+            <span class="title slds-text-heading--label">Limit Magic Batch</span>
+        </aura:set>
+        <aura:set attribute="actions">
+            <aura:if isTrue="{!v.scheduledJob.Id}">
+				<lightning:buttonIcon onclick="{!c.deleteJob}" size="large" iconName="utility:delete" />
+			<aura:set attribute="else">
+			    <lightning:buttonIcon onclick="{!c.createJob}" size="large" iconName="utility:macros" />
+			</aura:set> 
+			</aura:if>      
+        </aura:set>
+        <div aura:id="main" class="slds-table_edit_container">
+            <table class="slds-table slds-table--bordered slds-table--striped slds-max-medium-table--stacked-horizontal slds-table_fixed-layout">
+            <thead> 
+            <tr class="slds-text-heading--label">
+                <th scope="col"><div class="slds-cell-wrap" title="Job Name">Job Name</div></th>
+                <th scope="col"><div class="slds-cell-wrap" title="Submitter">Submitter</div></th>
+                <th scope="col"><div class="slds-cell-wrap" title="Scheduled">Scheduled</div></th>
+                <th scope="col"><div class="slds-cell-wrap" title="Next run">Next run</div></th>
+            </tr>
+            </thead>
+            <tbody class="slds-hide" aura:id="tableBody">
+            <tr aura:id="jobRow" class="slds-cell-shrink">
+	            <td data-label="Job Name" class="slds-cell-wrap" title="Job Name">{!v.scheduledJob.CronJobDetail.Name}</td> 		
+				<td data-label="Submitter" class="slds-cell-wrap" title="Submitter">{!v.scheduledJob.CreatedBy.Name}</td>
+				<td data-label="Scheduled" class="slds-cell-wrap" title="Scheduled"><ui:outputDateTime value="{!v.scheduledJob.CreatedDate}"/></td>
+				<td data-label="Next run" class="slds-cell-wrap" title="Next run"><ui:outputDateTime value="{!v.scheduledJob.NextFireTime}"/></td>
+			</tr> 
+            </tbody>
+        </table>
+        </div>
+    </lightning:card>
+</aura:component>

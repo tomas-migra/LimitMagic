@@ -1,0 +1,8 @@
+<apex:page showHeader="false" 
+            sidebar="false"
+            standardController="ACNLM_Environment__c"
+            extensions="ACNLM_RefreshLimitMagicController"
+            recordSetVar="environments"
+            tabStyle="ACNLM_Environment__c"
+            action="{!doRefreshAndGoBack}">
+</apex:page>

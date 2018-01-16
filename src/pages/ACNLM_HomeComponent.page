@@ -1,0 +1,19 @@
+<apex:page showHeader="false" 
+            sidebar="false"
+            controller="ACNLM_HomeComponentController">
+	<apex:form id="form">
+		<apex:pageBlock title="LimitMagic Batch" mode="inlineEdit">
+			<apex:pageMessages />
+			<apex:pageBlockButtons location="bottom">
+				<apex:commandButton action="{!abortJob}" value="Delete" rendered="{!job!=null}" reRender="form"/>
+				<apex:commandButton action="{!scheduleNewJob}" value="Schedule" rendered="{!and(job=null,dataValid)}" reRender="form"/>
+			</apex:pageBlockButtons>
+			<apex:pageBlockSection columns="1" rendered="{!dataValid}">
+				<apex:outputField value="{!job.CronJobDetail.Name}" label="Job Name"/>
+				<apex:outputField value="{!job.CreatedBy.Name}" label="Submitter"/>
+				<apex:outputField value="{!job.CreatedDate}" label="Scheduled"/>
+				<apex:outputField value="{!job.NextFireTime}" label="Next Run"/>
+			</apex:pageBlockSection>
+		</apex:pageBlock>
+	</apex:form>
+</apex:page>

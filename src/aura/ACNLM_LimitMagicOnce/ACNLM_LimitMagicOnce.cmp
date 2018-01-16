@@ -1,0 +1,15 @@
+<!--quickAdd.cmp-->
+<aura:component controller="ACNLM_GetEnvironemntLimitsBatch"
+                implements="force:lightningQuickActionWithoutHeader"
+                access="global">
+    <aura:attribute name="recordId" type="Id" access="global"/>
+	<aura:attribute name="envRecord" type="ACNLM_Environment__c"/>
+	<force:recordData aura:id="query"
+	    recordId="{!v.recordId}"
+	    fields="Id, ACNLM_NamedCredentials__c, ACNLM_Notification_Threshold__c, ACNLM_Last_summary__c, ACNLM_Last_refresh__c, ACNLM_Next_summary__c, ACNLM_Environment_Interval__c"
+	    targetFields="{!v.envRecord}"
+	    recordUpdated="{!c.handleRecordUpdated}"/>
+	 <div aura:id="spinnerId" class="slds-is-relative absoluteCenter">
+       <lightning:spinner variant="brand"/>
+    </div>
+</aura:component>
