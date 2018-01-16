@@ -8,7 +8,7 @@
  * Limit Magic
  * @author  Tomas Migra (Accenture)
  * @created 2018-01-01
- * @version 1.0
+ * @version 1.0.
  * 
  */
 global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObject>, Database.AllowsCallouts {
