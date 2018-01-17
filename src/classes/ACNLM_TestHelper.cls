@@ -46,4 +46,13 @@ public class ACNLM_TestHelper implements HttpCalloutMock {
         }
         return envList;
     }
+
+    public static ACNLM_Batch_settings__c createBatchSettings(){
+        ACNLM_Batch_settings__c settings = new ACNLM_Batch_settings__c();
+        settings.ACNLM_Endpoint__c = '/services/data/v41.0/limits';
+        settings.ACNLM_Interval__c = 60;
+        settings.ACNLM_Size__c = 200;
+        settings.Name = 'LimitMagic';
+        return settings;
+    }
 }

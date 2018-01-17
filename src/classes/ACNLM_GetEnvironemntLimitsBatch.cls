@@ -1,16 +1,3 @@
-/**
- * ACNLM_GetEnvironemntLimitsBatch - Class which store all logic for retrieveing limits. 
- * Limits are retreived by batch, quick action on Environemnt object, List button on Env. List view and page button on Env. page
- * This class extend ACNLM_RefreshLimitMagicController and ACNLM_HomeComponentController.
- * This class is controller for ACNLM_LimitMagicBatch and ACNLM_LimitMagicOnce Lightning components.
- * Uses Custom metedata types, Custom label, Named credentials 
- * 
- * Limit Magic
- * @author  Tomas Migra (Accenture)
- * @created 2018-01-01
- * @version 1.0
- * 
- */
 global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObject>, Database.AllowsCallouts {
 	
 	Final String jobEndpoint;
@@ -23,36 +10,39 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 	Datetime now = datetime.now();
 	String query = 'SELECT Id, ACNLM_NamedCredentials__c, ACNLM_Next_summary__c, ACNLM_Last_summary__c, ACNLM_Last_refresh__c, ACNLM_Environment_Interval__c, ACNLM_Notification_threshold__c FROM ACNLM_Environment__c WHERE ACNLM_Environment_Interval__c != 0 AND ACNLM_Environment_Interval__c != null AND (ACNLM_Next_refresh__c <= :now OR ACNLM_Last_refresh__c = null)';
 	String errorMessage;
-	@TestVisible static String batchSettingsDeveloperName = 'Main_settings';
+	@TestVisible static String batchSettingsName = 'LimitMagic';
 	List<ACNLM_LimitMapping__mdt> limitMappings;
-	Map<Id, Datetime> mapLastRefresh = new Map<Id, Datetime>(); 
-	
+	Map<Id, Datetime> mapLastRefresh = new Map<Id, Datetime>();
+	ACNLM_Batch_settings__c batchSettingsVar;
+	String LimitMappingError = System.Label.ACNLM_LimitMappingError;//Limit Magic custom metadata is not set up properly. Check Limit Mapping custom metadata type.
+	String BatchSettingsError = System.Label.ACNLM_BatchSettingError;//Batch setting is missing. Navigate to Limit Magic Home to set it up correctly.
+
 	String threshold;
 	String thresholdText;
 	String thresholdTable;
 	String summaryText;
 	String summaryTable;
-
-	/*Checks if LimitMappings and BatchSettings Custom metadata type exists if yes populate its values to variables*/
 	global ACNLM_GetEnvironemntLimitsBatch(){
-		List<ACNLM_BatchSettings__mdt> batchSettings = [SELECT Id, ACNLM_Name__c, ACNLM_Interval__c, ACNLM_Size__c, ACNLM_Call_again__c, ACNLM_Endpoint__c FROM ACNLM_BatchSettings__mdt WHERE DeveloperName =:batchSettingsDeveloperName LIMIT 1]; //Main_settings
+		List<ACNLM_Batch_settings__c> batchSettings = [SELECT Id, Name, ACNLM_Interval__c, ACNLM_Size__c, ACNLM_Endpoint__c FROM ACNLM_Batch_settings__c WHERE Name =:batchSettingsName LIMIT 1]; //Main_settings
 		limitMappings = [SELECT DeveloperName, MasterLabel,Max_Field_API__r.QualifiedApiName ,Rem_Field_API__r.QualifiedApiName, (SELECT DeveloperName, MasterLabel,Max_Field_API__r.QualifiedApiName,Rem_Field_API__r.QualifiedApiName FROM LimitMappingChildren__r) FROM ACNLM_LimitMapping__mdt LIMIT 50000];
 		if (!limitMappings.isEmpty() && !batchSettings.isEmpty()){
 			jobEndpoint = batchSettings[0].ACNLM_Endpoint__c;
-			jobName = batchSettings[0].ACNLM_Name__c;
+			jobName = batchSettings[0].Name;
 			jobInterval = Integer.valueof(batchSettings[0].ACNLM_Interval__c); 
 			jobSize =  Integer.valueof(batchSettings[0].ACNLM_Size__c);
-			callAgain = batchSettings[0].ACNLM_Call_again__c;
+			callAgain = true;
 			dataValid = true;
-		} else errorMessage = System.Label.ACNLM_NotCorrectDataError;
+			batchSettingsVar = batchSettings[0];
+		} else if(!limitMappings.isEmpty() && batchSettings.isEmpty()){
+			errorMessage = BatchSettingsError;
+		} else errorMessage = LimitMappingError;
 	}
 	
-	/*Batch*/
 	global Database.QueryLocator start(Database.BatchableContext BC) {
 		return Database.getQueryLocator(query);
 	}
 
-	/*Execute method is called also by button and quick actions*/
+
    	global void execute(Database.BatchableContext BC, List<ACNLM_Environment__c> scope) {
 		List<ACNLM_Limit__c> listOfLimit = new List<ACNLM_Limit__c>();
 		List<ACNLM_Environment__c> listOfEnv = new List<ACNLM_Environment__c>();
@@ -63,7 +53,7 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 			summaryText = null;
 			summaryTable = null;
 			mapLastRefresh.put(env.Id, env.ACNLM_Last_refresh__c);
-			if (dataValid){//batchSettings or limitMapping correct
+			if (dataValid){//batchSettings and limitMapping correct
 				errorMessage = null;
 				HttpResponse response = getResponse(env.ACNLM_NamedCredentials__c);
 				system.debug(response);
@@ -105,7 +95,6 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 		}
 	}
 	
-	/*Schedules batch again if all finished succesfully*/
 	global Void finish(Database.BatchableContext BC) {
 		if (dataValid && callAgain){
 			ACNLM_GetEnvironemntLimitsBatch batch = new ACNLM_GetEnvironemntLimitsBatch();
@@ -113,7 +102,6 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 		}
 	}
 	
-	/*If custom button pressed, and all data correct create Limits if not Error message on Environemnt filled in*/
 	global static void callFromButtons(Set<Id> envIds){
 		ACNLM_GetEnvironemntLimitsBatch ACNLM_GetEnvironemntLimitsBatch = new ACNLM_GetEnvironemntLimitsBatch();
 		List<ACNLM_Environment__c> listOfEnv = new List<ACNLM_Environment__c> ([SELECT Id, ACNLM_NamedCredentials__c, ACNLM_Next_summary__c, ACNLM_Last_summary__c, ACNLM_Last_refresh__c, ACNLM_Environment_Interval__c, ACNLM_Notification_threshold__c FROM ACNLM_Environment__c WHERE Id IN :envIds]);
@@ -131,9 +119,6 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 		}
 	}
 
-  	/**
-	 *Controller for ACNLM_LimitMagicOnce Lightning component
-	 *If custom button pressed, and all data correct create Limits if not Error message on Environemnt filled in*/
 	@AuraEnabled
 	global static String callFromQuickAction(ACNLM_Environment__c env){
 		ACNLM_GetEnvironemntLimitsBatch ACNLM_GetEnvironemntLimitsBatch = new ACNLM_GetEnvironemntLimitsBatch();
@@ -147,20 +132,36 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 			return ACNLM_GetEnvironemntLimitsBatch.errorMessage;
 		}
 	}
-  	/**
-	 *Controller for ACNLM_LimitMagicOnce Lightning component
-	 *Checks data if valid return null if not return error message*/
+
 	@AuraEnabled
 	global static String checkDataValidity(){
 		ACNLM_GetEnvironemntLimitsBatch ACNLM_GetEnvironemntLimitsBatch = new ACNLM_GetEnvironemntLimitsBatch();
 		if (ACNLM_GetEnvironemntLimitsBatch.dataValid){
 			return null;
-		}return ACNLM_GetEnvironemntLimitsBatch.errorMessage;
+		}else return ACNLM_GetEnvironemntLimitsBatch.errorMessage;
+
 	}
 
-	/**
-	 *Controller for ACNLM_LimitMagicBatch Lightning component
-	 *If data valid query Limit magic scheduledJob and return it*/
+	@AuraEnabled
+	global static ACNLM_Batch_settings__c getBatchSettings(){
+		ACNLM_GetEnvironemntLimitsBatch ACNLM_GetEnvironemntLimitsBatch = new ACNLM_GetEnvironemntLimitsBatch();
+		if (ACNLM_GetEnvironemntLimitsBatch.batchSettingsVar == null){
+			ACNLM_Batch_settings__c settings = new ACNLM_Batch_settings__c();
+			settings.ACNLM_Endpoint__c = '/services/data/v41.0/limits';
+			settings.ACNLM_Interval__c = 60;
+			settings.ACNLM_Size__c = 200;
+			settings.Name = batchSettingsName;
+			return settings;
+		}else return ACNLM_GetEnvironemntLimitsBatch.batchSettingsVar;
+	}
+
+	@AuraEnabled
+	global static void saveCustomSettings(ACNLM_Batch_settings__c batchSettings, Boolean isNew){
+		if (isNew){
+			insert batchSettings;
+		}else update batchSettings;
+	}
+
 	@AuraEnabled
 	global static CronTrigger getScheduledJob(){
 		ACNLM_GetEnvironemntLimitsBatch ACNLM_GetEnvironemntLimitsBatch = new ACNLM_GetEnvironemntLimitsBatch();
@@ -173,47 +174,38 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 		return null;
 	}
 
-	/**
-	 *Controller for ACNLM_LimitMagicBatch Lightning component
-	 *If data valid get Scheduled job if null schedule new one, if alredy scheduled aborts it first and schedule new*/
 	@AuraEnabled
 	global static void scheduleNewJob(){
 		ACNLM_GetEnvironemntLimitsBatch ACNLM_GetEnvironemntLimitsBatch = new ACNLM_GetEnvironemntLimitsBatch();
-		if (ACNLM_GetEnvironemntLimitsBatch.dataValid){
-			CronTrigger scheduledJob = getScheduledJob();
-			if (scheduledJob == null){
-				ACNLM_GetEnvironemntLimitsBatch.finish(null);
-			}else {
-				abortJob();
-				ACNLM_GetEnvironemntLimitsBatch.finish(null);
-			}
+		CronTrigger scheduledJob = getScheduledJob();
+		if (scheduledJob == null){
+			ACNLM_GetEnvironemntLimitsBatch.finish(null);
+		}else {
+			abortJob();
+			ACNLM_GetEnvironemntLimitsBatch.finish(null);
 		}
 	}
 
-	/**
-	 *Controller for ACNLM_LimitMagicBatch Lightning component
-	 *If data valid get Scheduled job if not null aborts it*/
 	@AuraEnabled
 	global static void abortJob(){
 		ACNLM_GetEnvironemntLimitsBatch ACNLM_GetEnvironemntLimitsBatch = new ACNLM_GetEnvironemntLimitsBatch();
 		if (ACNLM_GetEnvironemntLimitsBatch.dataValid){
-			CronTrigger scheduledJob = getScheduledJob();
-			if (scheduledJob != null){
-				System.AbortJob(scheduledJob.Id);
+			List<CronTrigger> scheduledJobs = [SELECT Id FROM CronTrigger WHERE CronJobDetail.Name= :ACNLM_GetEnvironemntLimitsBatch.jobName LIMIT 1];
+			system.debug(scheduledJobs);
+			if (!scheduledJobs.isEmpty()){
+				System.AbortJob(scheduledJobs[0].Id);
 			}
 		}
 	}
 
-	/*Getting JSON response, using Named Credential and endpoint from custom metadata BatchSettings */
 	private HttpResponse getResponse(String NamedCredential){
 		HttpRequest req = new HttpRequest();
 		req.setEndpoint('callout:'+NamedCredential+jobEndpoint);
 		req.setMethod('GET');
 		Http http = new Http();
 		try{
-			system.debug('Anydatatype_msg');
 			HTTPResponse resp = http.send(req);
-			system.debug('Anydatatype_msg');
+			system.debug(resp.getbody());
 			return resp;
 		} catch (System.CalloutException e){
 			System.debug('ERROR:' + e);
@@ -222,7 +214,6 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 		return null;
 	}
 
-	/*Parsing JSON from getResponse and storing data to Limit object, also creating table for Summary and Notification Email*/
 	private ACNLM_Limit__c createLimit (ACNLM_Environment__c env, String responseBody){
 		ACNLM_Limit__c limitRec = new ACNLM_Limit__c();
 		limitRec.ACNLM_Timestamp__c = datetime.now();
@@ -286,7 +277,6 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 		return limitRec;
 	}
 
-	/*Creating Summary and Notification email table*/
 	private String addRowToTable (String Label, Integer Max, Integer Rem, String type){
 		String tableRow = '';
 		if (type == 'Header'){
@@ -308,6 +298,7 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
          	tableRow += '<td align="right"><font color="#3F3D33">'+(((Decimal)Max-(Decimal)Rem)/(Decimal)Max*100).round()+'%</td>';
         	tableRow += '</tr>';
 		}
+
 		else{
 			tableRow += '<tr>';
         	tableRow += '<td><font color="#3F3D33">'+Label+'</td>';
@@ -319,7 +310,6 @@ global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObje
 		return tableRow;
 	}
 
-	/*Update values on Environment record*/
 	private ACNLM_Environment__c updateEnv(Id envId, Integer envInterval){
 		ACNLM_Environment__c env = new ACNLM_Environment__c();
 		env.Id = envId;

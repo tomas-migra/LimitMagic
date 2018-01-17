@@ -4,6 +4,8 @@
 	<aura:attribute name="scheduledJob" type="CronTrigger"/>
 	<aura:attribute name="spinnerShow" type="Boolean" default="true"/>
     <aura:attribute name="errorMessage" type="String"/>
+    <aura:attribute name="customSettings" type="ACNLM_Batch_settings__c"/>
+    <aura:attribute name="newCustomSettings" type="Boolean" default="false"/>
 	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
 
 	<lightning:card >
@@ -15,14 +17,17 @@
             <span class="title slds-text-heading--label">Limit Magic Batch</span>
         </aura:set>
         <aura:set attribute="actions">
+            <lightning:buttonIcon onclick="{!c.editSettings}" size="large" iconName="utility:custom_apps" aura:id="editSettingsButtton"/>
+            <lightning:buttonIcon onclick="{!c.cancelSettins}" size="large" iconName="utility:close" class="slds-hide" aura:id="cancelSettingsButtton"/>
+            <lightning:buttonIcon onclick="{!c.saveSettings}" size="large" iconName="utility:save" class="slds-hide" aura:id="saveSettingsButtton"/>
             <aura:if isTrue="{!v.scheduledJob.Id}">
-				<lightning:buttonIcon onclick="{!c.deleteJob}" size="large" iconName="utility:delete" />
-			<aura:set attribute="else">
-			    <lightning:buttonIcon onclick="{!c.createJob}" size="large" iconName="utility:macros" />
-			</aura:set> 
-			</aura:if>      
+				<lightning:buttonIcon onclick="{!c.deleteJob}" size="large" iconName="utility:delete" aura:id="deleteJobButtton"/>
+			</aura:if>
+            <aura:if isTrue="{!and(not(v.scheduledJob.Id), not(v.newCustomSettings))}">
+			    <lightning:buttonIcon onclick="{!c.createJob}" size="large" iconName="utility:macros" aura:id="scheduleJobButtton"/>
+            </aura:if>
         </aura:set>
-        <div aura:id="main" class="slds-table_edit_container">
+        <div aura:id="jobSection" class="slds-table_edit_container">
             <table class="slds-table slds-table--bordered slds-table--striped slds-max-medium-table--stacked-horizontal slds-table_fixed-layout">
             <thead> 
             <tr class="slds-text-heading--label">
@@ -41,6 +46,11 @@
 			</tr> 
             </tbody>
         </table>
+        </div>
+        <div aura:id="settingSection" class="slds-hide slds-p-horizontal_medium">
+            <lightning:input type="number" aura:id="batchSettingInput" label="Job Interval (minutes)" title="Controls how frequently Limit Magic batch will be trigered." value="{!v.customSettings.ACNLM_Interval__c}" min="1" max="999999" required="true"/>
+            <lightning:input type="number" aura:id="batchSettingInput" label="Job Size" title="Controls how many Environments will enter Limit Magic batch at once." value="{!v.customSettings.ACNLM_Size__c}" min="1" max="999999" required="true"/>
+            <lightning:input type="text" aura:id="batchSettingInput" label="Endpoint" title="Limits REST API service endpoint, e.g. /services/data/v41.0/limits" value="{!v.customSettings.ACNLM_Endpoint__c}" pattern="/services/data/.+./limits" messageWhenPatternMismatch="Allowed endpoint pattern is /services/data/.../limits" maxlength="255" required="true"/>
         </div>
     </lightning:card>
 </aura:component>
