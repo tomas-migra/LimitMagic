@@ -1,3 +1,16 @@
+/**
+ * ACNLM_GetEnvironemntLimitsBatch - Class which store all logic for retrieveing limits. 
+ * Limits are retreived by batch, quick action on Environemnt object, List button on Env. List view and page button on Env. page
+ * This class extend ACNLM_RefreshLimitMagicController and ACNLM_HomeComponentController.
+ * This class is controller for ACNLM_LimitMagicBatch and ACNLM_LimitMagicOnce Lightning components.
+ * Uses Custom metedata types, Custom label, Named credentials 
+ * 
+ * Limit Magic
+ * @author  Tomas Migra (Accenture)
+ * @created 2018-01-01
+ * @version 1.1
+ * 
+ */
 global class ACNLM_GetEnvironemntLimitsBatch implements Database.Batchable<sObject>, Database.AllowsCallouts {
 	
 	Final String jobEndpoint;
