@@ -1,0 +1,18 @@
+<apex:page 	showHeader="true" 
+			sidebar="true"
+			standardController="ACNLM_Environment__c"
+			extensions="EnvironmentDataLoaderExtension"
+            tabStyle="ACNLM_Environment__c">
+	<apex:form>
+	<apex:sectionHeader title="Environment DataLoader"/>
+		<apex:pageBlock>
+			<apex:pageBlockButtons location="bottom" >
+				<apex:commandButton action="{!goBack}" value="Cancel"/>
+				<apex:commandButton action="{!doImport}" value="Import" />
+			</apex:pageBlockButtons>
+			<apex:pageBlockSection>
+				<apex:inputFile value="{!csvFileBody}" fileName="{!csvAsString}"/>
+			</apex:pageBlockSection>
+		</apex:pageBlock>
+	</apex:form>
+</apex:page>
